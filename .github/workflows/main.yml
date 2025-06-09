@@ -42,7 +42,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
       - name: setup node
         uses: actions/setup-node@v4
         with:
@@ -58,8 +57,6 @@ jobs:
       - name: Install CUDA toolkit (Windows CUDA only)
         if: matrix.platform == 'windows-latest' && matrix.features == 'cuda'
         uses: Jimver/cuda-toolkit@master
-        with:
-        disable-cache: true
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -88,7 +85,6 @@ jobs:
           Copy-Item "$cudaPath\cudart64*.dll" -Destination $targetPath
           Copy-Item "$cudaPath\cublas64*.dll" -Destination $targetPath
           Copy-Item "$cudaPath\cublasLt64*.dll" -Destination $targetPath
-
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
