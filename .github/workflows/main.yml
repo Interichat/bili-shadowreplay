@@ -58,6 +58,8 @@ jobs:
       - name: Install CUDA toolkit (Windows CUDA only)
         if: matrix.platform == 'windows-latest' && matrix.features == 'cuda'
         uses: Jimver/cuda-toolkit@master
+        with:
+        disable-cache: true
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
