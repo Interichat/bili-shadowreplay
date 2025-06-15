@@ -278,7 +278,7 @@ impl BiliRecorder {
                                 if let Some(QuotedOrUnquoted::Quoted(bili_display)) =
                                     other_attributes.get("BILI-DISPLAY")
                                 {
-                                    bili_display == "原画"
+                                    bili_display == "高清"
                                 } else {
                                     false
                                 }
