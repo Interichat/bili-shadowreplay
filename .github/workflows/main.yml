@@ -1,29 +1,17 @@
 name: Release
+
 on:
   workflow_dispatch:
   push:
     tags:
       - "v*"
+
 jobs:
   publish-tauri:
+    runs-on: windows-latest
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: "macos-latest" # for Intel based macs.
-            args: "--target x86_64-apple-darwin"
-          - platform: "ubuntu-22.04"
-            args: ""
-          - platform: "windows-latest"
-            args: "--features cuda"
-            features: "cuda"
-          - platform: "windows-latest"
-            args: ""
-            features: "cpu"
 
-    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,26 +25,14 @@ jobs:
           fi
         shell: bash
 
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - name: setup node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: "yarn" # Set this to npm, yarn or pnpm.
+          cache: "yarn"
 
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
-        with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - name: Install CUDA toolkit (Windows CUDA only)
-        if: matrix.platform == 'windows-latest' && matrix.features == 'cuda'
-        uses: Jimver/cuda-toolkit@master
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -64,38 +40,21 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Setup ffmpeg
-        if: matrix.platform == 'windows-latest'
-        working-directory: ./
         shell: pwsh
-        # running script ffmpeg_setup.ps1 to install ffmpeg on windows.
-        # This script is located in the root of the repository.
         run: ./ffmpeg_setup.ps1
 
-      - name: install frontend dependencies
-        # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
-        run: yarn install # change this to npm or pnpm depending on which one you use.
+      - name: Install frontend dependencies
+        run: yarn install
 
-      - name: Copy CUDA DLLs (Windows CUDA only)
-        if: matrix.platform == 'windows-latest' && matrix.features == 'cuda'
-        shell: pwsh
-        run: |
-          $cudaPath = "$env:CUDA_PATH\bin"
-          $targetPath = "src-tauri"
-          New-Item -ItemType Directory -Force -Path $targetPath
-          Copy-Item "$cudaPath\cudart64*.dll" -Destination $targetPath
-          Copy-Item "$cudaPath\cublas64*.dll" -Destination $targetPath
-          Copy-Item "$cudaPath\cublasLt64*.dll" -Destination $targetPath
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CMAKE_OSX_DEPLOYMENT_TARGET: "13.3"
-          CMAKE_CUDA_ARCHITECTURES: "75"
-          WHISPER_BACKEND: ${{ matrix.features }}
+          WHISPER_BACKEND: cpu
         with:
           tagName: v__VERSION__
           releaseName: "BiliBili ShadowReplay v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }} ${{ matrix.platform == 'windows-latest' && matrix.features == 'cuda' && '--config src-tauri/tauri.windows.cuda.conf.json' || '' }}
+          args: ""
           includeDebug: true
